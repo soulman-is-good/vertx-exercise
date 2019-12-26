@@ -5,32 +5,37 @@
  */
 package kz.soulman.firstmaven;
 
-import io.vertx.core.AbstractVerticle;
+import io.vertx.config.ConfigRetriever;
+import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import java.io.IOException;
 
 /**
  *
  * @author maxim
  */
-public class App extends AbstractVerticle {
-    private static final Logger LOGGER = LoggerFactory.getLogger(App.class);
-    
-    public static void main(String[] args) {
-        Vertx vertx = Vertx.vertx();
-        App app = new App();
+public class App {
+    static final Logger LOG = LoggerFactory.getLogger(App.class);
 
-        vertx.deployVerticle(app);
-    }
-    
-    @Override
-    public void start() {
-        LOGGER.info("Verticle up");
-    }
-    
-    @Override
-    public void stop() {
-        LOGGER.info("Verticle down");
+    public static void main(String[] args) {
+        try {
+            Vertx vertx = Vertx.vertx();
+            ConfigRetriever.create(vertx).getConfig(config -> {
+                if (config.succeeded()) {
+                    HttpVerticle http = new HttpVerticle();
+                    DeploymentOptions options = new DeploymentOptions();
+                    
+                    options.setConfig(config.result());
+                    vertx.deployVerticle(http, options);
+                } else {
+                    LOG.error("Error processing config file: ", config.cause());
+                }
+            });
+            System.in.read();
+        } catch (IOException ex) {
+            LOG.fatal("Could not run", ex);
+        }
     }
 }
